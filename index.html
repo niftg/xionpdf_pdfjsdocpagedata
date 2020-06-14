@@ -11,44 +11,41 @@
 	<canvas id="the-canvas" style="border: 1px solid black; direction: ltr;"></canvas>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.min.js"></script>
 	<script id="script">
-	var url = /*'./helloworld.pdf'*/ 'xion.pdf';
+	var url = 'xion.pdf'; // needs local server
 	var pdfdoc, docpage; // for debugging
-	//
-	// The workerSrc property shall be specified.
-	//
+	var blobs = [];
+
 	pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.worker.min.js';
-	//
-	// Asynchronous download PDF
-	//
+
 	var loadingTask = pdfjsLib.getDocument(url);
 	loadingTask.promise.then(function(pdf) {
 		pdfdoc = pdf;
-		main(pdf, 5);
+		//main(pdf, 5);
+		main(pdf)
 	});
 
-	function main(doc, endPage = doc.numPages) {
+	function main(doc, endPage = doc.numPages, startPage = 1) {
 		console.log(`pdf loaded: ${doc.numPages} pages`);
-		makeJSONGetPromises(doc, endPage).then(console.info);
+		makeJSONGetPromises(doc, endPage, startPage).then(d=>
+			{blobs.push([`${url}_${startPage}-${endPage}.json`, new Blob([d],{"type":"text/json"})]);}
+		).then(()=>{console.log('Blobs are ready.')});
 	};
 
-	function renderPageOfDoc(pnum, doc = pdfdoc) {
-		doc.getPage(pnum).then(function(page) {
-			docpage = page;
-			var scale = 1;
-			var viewport = page.getViewport({
-				scale: scale,
-			});
-			var canvas = document.getElementById('the-canvas');
-			var context = canvas.getContext('2d');
-			canvas.height = viewport.height;
-			canvas.width = viewport.width;
-			var renderContext = {
-				canvasContext: context,
-				viewport: viewport,
-			};
-			page.render(renderContext);
-			getPageDataJSON(page).then(console.info);
-		});
+	async function renderPageOfDoc(pnum, doc = pdfdoc, stringify = true) {
+		var page = await doc.getPage(pnum);
+		docpage = page;
+		var scale = 1;
+		var viewport = page.getViewport({scale: scale});
+		var canvas = document.getElementById('the-canvas');
+		var context = canvas.getContext('2d');
+		canvas.height = viewport.height;
+		canvas.width = viewport.width;
+		var renderContext = {
+			canvasContext: context,
+			viewport: viewport,
+		};
+		var rp = await page.render(renderContext).promise;
+		return await getPageDataJSON(page, stringify);
 	}
 
 	async function getPageDataJSON(page, stringify=true) {
@@ -65,11 +62,25 @@
 	}
 
 	async function makeJSONGetPromises(doc, endPageNum, curPgNm=1, retArr=[]) {
-		var page = await doc.getPage(curPgNm);
-		retArr.push(await getPageDataJSON(page,false));
-		return curPgNm == endPageNum ? retArr : await makeJSONGetPromises(doc,endPageNum, curPgNm+1, retArr)
+		retArr.push({
+			pageNum: curPgNm,
+			data: await renderPageOfDoc(curPgNm, doc, false)
+		});
+		return curPgNm == endPageNum ? JSON.stringify(retArr) : await makeJSONGetPromises(doc, endPageNum, curPgNm+1, retArr)
+	}
+
+	window.addEventListener('load', ()=>{
+		document.getElementById('setBlobUrlsBtn').addEventListener('click', setBlobUrls)
+	});
+
+	function setBlobUrls() {
+		var blobUrls = document.getElementById('blobUrls');
+		blobUrls.innerHTML = blobs
+			.map(v => `<a href=${window.URL.createObjectURL(v[1])} download=${v[0]}>${v[0]}</a>`)
+			.join();
 	}
 	</script>
+	<button id="setBlobUrlsBtn">Set Blob URLs</button><span id="blobUrls"></span>
 	<hr>
 	<h2>JavaScript code:</h2>
 	<pre id="code"></pre>
