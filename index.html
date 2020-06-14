@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>render&getTextContent</title>
+</head>
+
+<body>
+	<h1>render&getTextContent</h1>
+	<canvas id="the-canvas" style="border: 1px solid black; direction: ltr;"></canvas>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.min.js"></script>
+	<script id="script">
+	var url = /*'./helloworld.pdf'*/ 'xion.pdf';
+	var pdfdoc, docpage; // for debugging
+	//
+	// The workerSrc property shall be specified.
+	//
+	pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.worker.min.js';
+	//
+	// Asynchronous download PDF
+	//
+	var loadingTask = pdfjsLib.getDocument(url);
+	loadingTask.promise.then(function(pdf) {
+		pdfdoc = pdf;
+		main(pdf, 5);
+	});
+
+	function main(doc, endPage = doc.numPages) {
+		console.log(`pdf loaded: ${doc.numPages} pages`);
+		makeJSONGetPromises(doc, endPage).then(console.info);
+	};
+
+	function renderPageOfDoc(pnum, doc = pdfdoc) {
+		doc.getPage(pnum).then(function(page) {
+			docpage = page;
+			var scale = 1;
+			var viewport = page.getViewport({
+				scale: scale,
+			});
+			var canvas = document.getElementById('the-canvas');
+			var context = canvas.getContext('2d');
+			canvas.height = viewport.height;
+			canvas.width = viewport.width;
+			var renderContext = {
+				canvasContext: context,
+				viewport: viewport,
+			};
+			page.render(renderContext);
+			getPageDataJSON(page).then(console.info);
+		});
+	}
+
+	async function getPageDataJSON(page, stringify=true) {
+		var tC = await page.getTextContent();
+		var objs = page.commonObjs._objs;
+		var oks = Object.keys(objs);
+		var realFN = {};
+		oks.forEach((k)=>{realFN[k]=objs[k].data.name;});
+		var ret = {
+			textContent: tC,
+			realFontNames: realFN
+		};
+		return stringify ? JSON.stringify(ret) : ret;
+	}
+
+	async function makeJSONGetPromises(doc, endPageNum, curPgNm=1, retArr=[]) {
+		var page = await doc.getPage(curPgNm);
+		retArr.push(await getPageDataJSON(page,false));
+		return curPgNm == endPageNum ? retArr : await makeJSONGetPromises(doc,endPageNum, curPgNm+1, retArr)
+	}
+	</script>
+	<hr>
+	<h2>JavaScript code:</h2>
+	<pre id="code"></pre>
+	<script>
+	document.getElementById('code').textContent = document.getElementById('script').text;
+	</script>
+</body>
+
+</html>
