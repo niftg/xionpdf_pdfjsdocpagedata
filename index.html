@@ -58,7 +58,7 @@
 			textContent: tC,
 			realFontNames: realFN
 		};
-		return stringify ? JSON.stringify(ret) : ret;
+		return stringify ? JSON.stringify(ret,null,2) : ret;
 	}
 
 	async function makeJSONGetPromises(doc, endPageNum, curPgNm=1, retArr=[]) {
@@ -66,7 +66,7 @@
 			pageNum: curPgNm,
 			data: await renderPageOfDoc(curPgNm, doc, false)
 		});
-		return curPgNm == endPageNum ? JSON.stringify(retArr) : await makeJSONGetPromises(doc, endPageNum, curPgNm+1, retArr)
+		return curPgNm == endPageNum ? JSON.stringify(retArr,null,2) : await makeJSONGetPromises(doc, endPageNum, curPgNm+1, retArr)
 	}
 
 	window.addEventListener('load', ()=>{
