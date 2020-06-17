@@ -9,13 +9,15 @@
 <body>
 	<h1>render&getTextContent</h1>
 	<canvas id="the-canvas" style="border: 1px solid black; direction: ltr;"></canvas>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.min.js"></script>
+	<!--script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.min.js"></script-->
+	<script src="./lib/pdf.min.js"></script>
 	<script id="script">
 	var url = 'xion.pdf'; // needs local server
 	var pdfdoc, docpage; // for debugging
 	var blobs = [];
 
-	pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.worker.min.js';
+	//pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.worker.min.js';
+	pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.min.js';
 
 	var loadingTask = pdfjsLib.getDocument(url);
 	loadingTask.promise.then(function(pdf) {
